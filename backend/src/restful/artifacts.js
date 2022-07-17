@@ -160,60 +160,77 @@ async function deleteArtifact(req, res) {
     }
 }
 
-async function syncArtifact(req, res) {
-    let { name } = req.params;
-    name = decodeURIComponent(name);
-    const allArtifacts = $.read(ARTIFACTS_KEY);
-    const artifact = findByName(allArtifacts, name);
+async function uploadArtifacts(res, name = null) {
+    const shouldUploadAll = !name
+    let artifacts = $.read(ARTIFACTS_KEY);
 
-    if (!artifact) {
+    if (!shouldUploadAll) {
+        // Uploading only one artifact
+        artifacts = [findByName(artifacts, name)];
+    } else {
+        // Uploading all artifacts
+        $.info('开始同步所有远程配置...');
+    }
+
+    if (!artifacts || artifacts.length < 1) {
         failed(
-            res,
-            new ResourceNotFoundError(
-                'RESOURCE_NOT_FOUND',
-                `Artifact ${name} does not exist!`,
-            ),
-            404,
+          res,
+          new ResourceNotFoundError(
+            'RESOURCE_NOT_FOUND',
+            `Artifact ${name} does not exist!`,
+          ),
+          404,
         );
         return;
     }
 
-    const output = await produceArtifact({
-        type: artifact.type,
-        name: artifact.source,
-        platform: artifact.platform,
-    });
-
-    $.info(
-        `正在上传配置：${artifact.name}\n>>>${JSON.stringify(
-            artifact,
-            null,
-            2,
-        )}`,
-    );
-    try {
-        const resp = await syncToGist({
-            [encodeURIComponent(artifact.name)]: {
-                content: output,
-            },
+    for (const artifact of artifacts) {
+        const output = await produceArtifact({
+            type: artifact.type,
+            name: artifact.source,
+            platform: artifact.platform,
         });
-        artifact.updated = new Date().getTime();
-        const body = JSON.parse(resp.body);
-        artifact.url = body.files[
-            encodeURIComponent(artifact.name)
-        ].raw_url.replace(/\/raw\/[^/]*\/(.*)/, '/raw/$1');
-        $.write(allArtifacts, ARTIFACTS_KEY);
-        success(res, artifact);
-    } catch (err) {
-        failed(
-            res,
-            new InternalServerError(
+
+        if (!shouldUploadAll) {
+            $.info(
+              `正在上传配置：${artifact.name}\n>>>${JSON.stringify(
+                artifact,
+                null,
+                2,
+              )}`,
+            );
+        }
+
+        try {
+            const resp = await syncToGist({
+                [encodeURIComponent(artifact.name)]: {
+                    content: output,
+                },
+            });
+            artifact.updated = new Date().getTime();
+            const body = JSON.parse(resp.body);
+            artifact.url = body.files[
+              encodeURIComponent(artifact.name)
+              ].raw_url.replace(/\/raw\/[^/]*\/(.*)/, '/raw/$1');
+            $.write(artifacts, ARTIFACTS_KEY);
+            success(res, artifact);
+        } catch (err) {
+            failed(
+              res,
+              new InternalServerError(
                 `FAILED_TO_SYNC_ARTIFACT`,
                 `Failed to sync artifact ${name}`,
                 `Reason: ${err}`,
-            ),
-        );
+              ),
+            );
+        }
     }
+}
+
+async function syncArtifact(req, res) {
+    let { name } = req.params;
+    name = decodeURIComponent(name);
+    await uploadArtifacts(res, name)
 }
 
 async function syncAllArtifacts(_, res) {
