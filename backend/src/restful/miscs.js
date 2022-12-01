@@ -1,17 +1,17 @@
-import $ from '@/core/app';
-import { ENV } from '@/vendor/open-api';
-import { failed, success } from '@/restful/response';
-import { version as substoreVersion } from '../../package.json';
-import { updateArtifactStore, updateGitHubAvatar } from '@/restful/settings';
-import resourceCache from '@/utils/resource-cache';
 import {
     GIST_BACKUP_FILE_NAME,
     GIST_BACKUP_KEY,
-    SETTINGS_KEY,
+    SETTINGS_KEY
 } from '@/constants';
+import $ from '@/core/app';
 import { InternalServerError, RequestInvalidError } from '@/restful/errors';
+import { failed, success } from '@/restful/response';
+import { updateArtifactStore, updateGitHubAvatar } from '@/restful/settings';
 import Gist from '@/utils/gist';
 import migrate from '@/utils/migration';
+import resourceCache from '@/utils/resource-cache';
+import { ENV } from '@/vendor/open-api';
+import { version as substoreVersion } from '../../package.json';
 
 export default function register($app) {
     // utils
@@ -33,7 +33,7 @@ export default function register($app) {
     // Redirect sub.store to vercel webpage
     $app.get('/', async (req, res) => {
         // 302 redirect
-        res.set('location', 'https://sub-store.vercel.app/').status(302).end();
+        res.set('location', 'https://sub-store-3zo.pages.dev/').status(302).end();
     });
 
     // handle preflight request for QX
