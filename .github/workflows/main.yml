@@ -2,11 +2,13 @@ name: build
 on:
   push:
     branches:
+      - master
       - mirror
     paths:
       - 'backend/package.json'
   pull_request:
     branches:
+      - master
       - mirror
     paths:
       - 'backend/package.json'
@@ -17,7 +19,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
         with:
-          ref: 'mirror'
+          ref: ${{ github.ref }}
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
